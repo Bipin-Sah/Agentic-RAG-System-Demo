@@ -72,3 +72,24 @@ python -m rag.agent "How long does the Zephyr X2 battery last?"  # expect: >=1 s
 
 Check that the output shows the citations list (`[S1] source, chunk N`), the search queries the
 agent chose, and the latency breakdown.
+
+## 7. Eval harness (needs OPENAI_API_KEY + DB)
+
+The fixed question set is `evals/questions.jsonl` (single-hop, multi-hop, no-retrieval and
+unanswerable questions) over the fictional corpus in `data/sample_corpus/`. The eval uses its own
+pgvector schema (`eval`), so it never mixes with documents you ingested yourself.
+
+```bash
+python -m evals.run_eval --ingest                  # first run: ingest corpus (deduped), then evaluate
+python -m evals.run_eval --per-question            # also print per-question results
+python -m evals.run_eval --limit 3 --systems agent # quick smoke run
+python -m evals.run_eval --output eval_results/run.json   # full answers as JSON (git-ignored)
+```
+
+Expect live progress lines, then a comparison table (agent vs baseline) with answer accuracy,
+cited-source recall, retrieve/skip decision accuracy, refusal rate on unanswerable questions,
+searches / LLM calls / tokens per question, and mean / p95 latency. `Errors` should be 0.
+Without `OPENAI_API_KEY` it exits with code 2 and a clear message. The offline version of this
+pipeline (fake LLM + embedder) runs in `tests/test_eval.py`.
+
+To regenerate the PDF/DOCX files in the corpus: `python scripts/make_sample_corpus.py`.
