@@ -86,7 +86,12 @@ def _remove_labels(text: str, is_known) -> str:
 
 
 def strip_unknown_labels(text: str, registry: SourceRegistry) -> str:
-    """Remove labels that don't refer to a retrieved chunk ('[S7]', or 'S7' in '[S1, S7]')."""
+    """Remove labels that don't refer to a retrieved chunk ('[S7]', or 'S7' in '[S1, S7]').
+
+    With nothing retrieved, bracketed text can't be a citation, so it is left as written.
+    """
+    if not len(registry):
+        return (text or "").strip()
     return _remove_labels(text, lambda label: registry.get(label) is not None)
 
 

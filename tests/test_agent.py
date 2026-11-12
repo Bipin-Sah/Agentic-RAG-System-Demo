@@ -151,3 +151,8 @@ def test_history_is_included_before_question():
     assert msgs[2]["content"] == "25 days."  # stale labels scrubbed
     assert history[1]["content"] == "25 days [S1]."  # caller's history untouched
     assert msgs[-1]["content"] == "follow-up"
+
+
+def test_direct_answer_keeps_literal_bracketed_text():
+    agent, _, _ = make_agent([ChatResult(content="In Markdown, [S1] is a reference link.")])
+    assert agent.answer("What does [S1] mean?").answer == "In Markdown, [S1] is a reference link."
