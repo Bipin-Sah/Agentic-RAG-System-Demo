@@ -99,6 +99,7 @@ def test_refusals_detected(text):
 
 def test_answers_are_not_refusals():
     assert not is_refusal("The X2 costs $3,499 [S1].")
+    assert not is_refusal("It costs $5,000. Ask if you need any information.")
 
 
 def test_source_matches_ignores_directory_prefix():
