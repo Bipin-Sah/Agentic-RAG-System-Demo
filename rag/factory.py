@@ -10,6 +10,7 @@ from rag.store import PgVectorStore
 
 if TYPE_CHECKING:
     from rag.agent import RetrievalAgent
+    from rag.baseline import NaiveRAG
     from rag.llm import OpenAIChatClient
     from rag.retriever import Retriever
 
@@ -26,8 +27,8 @@ def require_api_key(settings: Settings) -> str:
     return settings.openai_api_key
 
 
-def build_store(settings: Settings) -> PgVectorStore:
-    store = PgVectorStore(settings.database_url, settings.embed_dim)
+def build_store(settings: Settings, schema: str = "public") -> PgVectorStore:
+    store = PgVectorStore(settings.database_url, settings.embed_dim, schema=schema)
     store.init_schema()
     return store
 
@@ -56,3 +57,9 @@ def build_agent(settings: Settings, store: PgVectorStore | None = None) -> Retri
     return RetrievalAgent(
         build_chat(settings), build_retriever(settings, store), default_k=settings.top_k
     )
+
+
+def build_baseline(settings: Settings, store: PgVectorStore | None = None) -> NaiveRAG:
+    from rag.baseline import NaiveRAG
+
+    return NaiveRAG(build_chat(settings), build_retriever(settings, store), settings.top_k)
