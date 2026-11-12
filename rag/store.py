@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import functools
 import re
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -13,6 +15,18 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from rag.types import Chunk, RetrievedChunk
+
+
+def _locked(method):
+    """Serialize access to the store's single connection (e.g. Streamlit sessions sharing it)."""
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return wrapper
+
 
 _IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
@@ -39,6 +53,7 @@ class PgVectorStore:
         self.dim = dim
         self.schema = schema
         self._conn: psycopg.Connection | None = None
+        self._lock = threading.RLock()
 
     # -- connection -----------------------------------------------------------------
     @property
@@ -50,11 +65,13 @@ class PgVectorStore:
             self._conn = conn
         return self._conn
 
+    @_locked
     def close(self) -> None:
         if self._conn is not None and not self._conn.closed:
             self._conn.close()
 
     # -- schema ---------------------------------------------------------------------
+    @_locked
     def init_schema(self) -> None:
         s = self.schema
         with self.conn.transaction():
@@ -103,16 +120,19 @@ class PgVectorStore:
         ).fetchone()
         return row["dim"] if row else None
 
+    @_locked
     def drop_schema(self) -> None:
         self.conn.execute(f"DROP SCHEMA IF EXISTS {self.schema} CASCADE")
 
     # -- writes ---------------------------------------------------------------------
+    @_locked
     def find_document(self, sha256: str) -> DocumentInfo | None:
         for doc in self.list_documents():
             if doc.sha256 == sha256:
                 return doc
         return None
 
+    @_locked
     def add_document(
         self,
         source: str,
@@ -150,13 +170,16 @@ class PgVectorStore:
                 )
         return doc_id
 
+    @_locked
     def delete_document(self, document_id: int) -> None:
         self.conn.execute(f"DELETE FROM {self.schema}.documents WHERE id = %s", (document_id,))
 
+    @_locked
     def clear(self) -> None:
         self.conn.execute(f"TRUNCATE {self.schema}.documents, {self.schema}.chunks CASCADE")
 
     # -- reads ----------------------------------------------------------------------
+    @_locked
     def list_documents(self) -> list[DocumentInfo]:
         s = self.schema
         rows = self.conn.execute(
@@ -168,9 +191,11 @@ class PgVectorStore:
         ).fetchall()
         return [DocumentInfo(**r) for r in rows]
 
+    @_locked
     def count_chunks(self) -> int:
         return self.conn.execute(f"SELECT count(*) AS n FROM {self.schema}.chunks").fetchone()["n"]
 
+    @_locked
     def search(self, embedding: list[float], k: int = 5) -> list[RetrievedChunk]:
         """Return the ``k`` chunks with the highest cosine similarity to ``embedding``."""
         s = self.schema

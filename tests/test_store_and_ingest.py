@@ -133,3 +133,20 @@ def test_changed_file_replaces_previous_version(store, embedder, tmp_path):
     assert [(d.id, d.source) for d in docs] == [(second.document_id, p.as_posix())]
     hits = store.search(embedder.embed(["office closes"])[0], k=5)
     assert [h.content for h in hits] == ["The office closes at 7pm."]
+
+
+@pytest.mark.db
+def test_concurrent_writes_share_one_store_safely(store, embedder):
+    from concurrent.futures import ThreadPoolExecutor
+
+    chunks = [Chunk(content="same text", chunk_index=0, page=None)]
+    vecs = embedder.embed(["same text"])
+
+    def add(i):
+        return store.add_document(f"doc{i % 4}.txt", f"sha-{i}", chunks, vecs)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(add, range(40)))
+    docs = store.list_documents()
+    assert sorted(d.source for d in docs) == [f"doc{i}.txt" for i in range(4)]
+    assert store.count_chunks() == 4
