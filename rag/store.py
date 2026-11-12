@@ -124,6 +124,8 @@ class PgVectorStore:
             raise ValueError("chunks and embeddings must have the same length")
         s = self.schema
         with self.conn.transaction():
+            # A new version of a file replaces any previous version with the same source name.
+            self.conn.execute(f"DELETE FROM {s}.documents WHERE source = %s", (source,))
             row = self.conn.execute(
                 f"INSERT INTO {s}.documents (source, sha256) VALUES (%s, %s) RETURNING id",
                 (source, sha256),
