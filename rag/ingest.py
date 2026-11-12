@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -73,16 +74,13 @@ class Ingestor:
 
 
 def source_name(path: Path) -> str:
-    """Stable identity for a file: its path relative to the working directory (or absolute).
+    """Stable identity for a file: its absolute path, with symlinks left unresolved.
 
-    The same file gets the same name whether passed directly or found under a directory, and
-    different files never share one, so replacing a changed file can't clobber another.
+    The same path gets the same name regardless of the working directory or of how it was
+    passed (directly or found under a directory), and different paths never share one, so
+    replacing a changed file can't clobber another or leave its old version behind.
     """
-    resolved = Path(path).resolve()
-    try:
-        return resolved.relative_to(Path.cwd().resolve()).as_posix()
-    except ValueError:
-        return resolved.as_posix()
+    return Path(os.path.abspath(path)).as_posix()
 
 
 def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:

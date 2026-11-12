@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from rag.ingest import Ingestor, expand_paths, source_name
@@ -42,11 +44,6 @@ def test_dimension_mismatch_detected(store):
     other.close()
 
 
-@pytest.fixture(autouse=True)
-def _cwd(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-
-
 def test_ingest_mixed_formats_and_dedupe(store, embedder, tmp_path):
     write_pdf(
         tmp_path / "manual.pdf",
@@ -58,12 +55,13 @@ def test_ingest_mixed_formats_and_dedupe(store, embedder, tmp_path):
 
     ingestor = Ingestor(store, embedder, chunk_size=200, chunk_overlap=20)
     results = ingestor.ingest_paths([tmp_path])
-    assert sorted(r.source for r in results) == ["faq.txt", "manual.pdf", "policy.docx"]
+    names = ["faq.txt", "manual.pdf", "policy.docx"]
+    assert sorted(r.source for r in results) == [(tmp_path / n).as_posix() for n in names]
     assert not any(r.skipped for r in results)
     assert store.count_chunks() == 4  # 2 pdf pages + docx + txt
 
     hits = store.search(embedder.embed(["how many vacation days"])[0], k=1)
-    assert hits[0].source == "policy.docx"
+    assert hits[0].source.endswith("/policy.docx")
     pdf_hits = store.search(embedder.embed(["shutdown minutes"])[0], k=1)
     assert pdf_hits[0].page == 2
 
@@ -85,15 +83,24 @@ def test_expand_paths_filters_unsupported_and_uses_relative_sources(tmp_path):
     (tmp_path / "sub").mkdir()
     (tmp_path / "sub" / "a.txt").write_text("other a")
     single = tmp_path / "sub" / "a.txt"
-    assert [s for _, s in expand_paths([tmp_path])] == ["a.txt", "sub/a.txt"]
-    assert expand_paths([single]) == [(single, "sub/a.txt")]  # same name either way
+    expected = [(tmp_path / "a.txt").as_posix(), single.as_posix()]
+    assert [s for _, s in expand_paths([tmp_path])] == expected
+    assert expand_paths([single]) == [(single, single.as_posix())]  # same name either way
 
 
-def test_source_name_outside_cwd_is_absolute(tmp_path, monkeypatch):
+def test_source_name_ignores_cwd_and_symlink_targets(tmp_path, monkeypatch):
     (tmp_path / "here").mkdir()
+    (tmp_path / "v1.txt").write_text("v1")
+    link = tmp_path / "current.txt"
+    link.symlink_to(tmp_path / "v1.txt")
+    expected = (tmp_path / "current.txt").as_posix()
+    monkeypatch.chdir(tmp_path)
+    assert source_name(Path("current.txt")) == expected
     monkeypatch.chdir(tmp_path / "here")
-    assert source_name(tmp_path / "here" / "a.txt") == "a.txt"
-    assert source_name(tmp_path / "b.txt") == (tmp_path / "b.txt").resolve().as_posix()
+    assert source_name(Path("../current.txt")) == expected
+    link.unlink()
+    link.symlink_to(tmp_path / "here")  # retargeted symlink keeps its name
+    assert source_name(link) == expected
 
 
 def test_separate_roots_with_same_relative_path_kept_separate(store, embedder, tmp_path):
@@ -102,7 +109,7 @@ def test_separate_roots_with_same_relative_path_kept_separate(store, embedder, t
         (tmp_path / root / "docs" / "notes.txt").write_text(f"notes from {root}")
     Ingestor(store, embedder).ingest_paths([tmp_path / "r1" / "docs", tmp_path / "r2" / "docs"])
     sources = sorted(d.source for d in store.list_documents())
-    assert sources == ["r1/docs/notes.txt", "r2/docs/notes.txt"]
+    assert sources == [(tmp_path / r / "docs" / "notes.txt").as_posix() for r in ["r1", "r2"]]
 
 
 def test_same_basename_in_different_dirs_kept_separate(store, embedder, tmp_path):
@@ -110,7 +117,8 @@ def test_same_basename_in_different_dirs_kept_separate(store, embedder, tmp_path
         (tmp_path / d).mkdir()
         (tmp_path / d / "notes.txt").write_text(f"notes for team {d}")
     Ingestor(store, embedder).ingest_paths([tmp_path])
-    assert sorted(d.source for d in store.list_documents()) == ["x/notes.txt", "y/notes.txt"]
+    sources = sorted(d.source for d in store.list_documents())
+    assert sources == [(tmp_path / d / "notes.txt").as_posix() for d in ["x", "y"]]
 
 
 def test_changed_file_replaces_previous_version(store, embedder, tmp_path):
@@ -122,6 +130,6 @@ def test_changed_file_replaces_previous_version(store, embedder, tmp_path):
     second = ingestor.ingest_file(p)
     assert not second.skipped and second.document_id != first.document_id
     docs = store.list_documents()
-    assert [(d.id, d.source) for d in docs] == [(second.document_id, "policy.txt")]
+    assert [(d.id, d.source) for d in docs] == [(second.document_id, p.as_posix())]
     hits = store.search(embedder.embed(["office closes"])[0], k=5)
     assert [h.content for h in hits] == ["The office closes at 7pm."]
