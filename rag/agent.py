@@ -10,7 +10,14 @@ import sys
 import time
 
 from rag.answer import Answer, SearchStep
-from rag.citations import CITATION_RULES, SourceRegistry, format_sources, resolve_citations
+from rag.citations import (
+    CITATION_RULES,
+    SourceRegistry,
+    format_sources,
+    resolve_citations,
+    strip_all_labels,
+    strip_unknown_labels,
+)
 from rag.llm import ChatClient, ChatResult, assistant_message
 from rag.retriever import Retriever
 
@@ -63,6 +70,11 @@ Answering:
 - Be concise and directly answer the question."""
 
 
+def _scrub_history(history: list[dict] | None) -> list[dict]:
+    """Drop [S#] labels from earlier turns: labels are per-answer and would be misread."""
+    return [{**m, "content": strip_all_labels(m.get("content") or "")} for m in history or []]
+
+
 class RetrievalAgent:
     def __init__(
         self,
@@ -83,7 +95,7 @@ class RetrievalAgent:
         registry = SourceRegistry()
         messages: list[dict] = [
             {"role": "system", "content": SYSTEM_PROMPT.format(max_searches=self.max_searches)},
-            *(history or []),
+            *_scrub_history(history),
             {"role": "user", "content": question},
         ]
 
@@ -106,7 +118,7 @@ class RetrievalAgent:
                     }
                 )
 
-        result.answer = (final.content or "").strip()
+        result.answer = strip_unknown_labels(final.content or "", registry)
         result.retrieved = registry.chunks
         result.citations = resolve_citations(result.answer, registry)
         result.total_ms = (time.perf_counter() - start) * 1000

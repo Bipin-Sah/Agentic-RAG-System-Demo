@@ -70,6 +70,23 @@ def extract_labels(text: str) -> list[str]:
     return seen
 
 
+def strip_unknown_labels(text: str, registry: SourceRegistry) -> str:
+    """Remove labels that don't refer to a retrieved chunk ('[S7]', or 'S7' in '[S1, S7]')."""
+
+    def keep(match: re.Match) -> str:
+        labels = [p.strip() for p in match.group(1).split(",")]
+        known = [label for label in labels if registry.get(label) is not None]
+        return f"[{', '.join(known)}]" if known else ""
+
+    cleaned = _CITATION_GROUP.sub(keep, text or "")
+    return re.sub(r"[ \t]+([.,;:!?])", r"\1", re.sub(r"[ \t]{2,}", " ", cleaned)).strip()
+
+
+def strip_all_labels(text: str) -> str:
+    """Remove every citation label (used to scrub prior turns so stale labels aren't reused)."""
+    return strip_unknown_labels(text, SourceRegistry())
+
+
 def resolve_citations(text: str, registry: SourceRegistry) -> list[Citation]:
     return [
         Citation(label, chunk)

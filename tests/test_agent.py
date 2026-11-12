@@ -89,6 +89,7 @@ def test_multi_query_decomposition_labels_are_cumulative():
     ans = agent.answer("Vacation days and drone battery life?")
     assert len(ans.searches) == 2
     assert [c.chunk.source for c in ans.citations] == ["handbook.pdf", "specs.docx"]
+    assert ans.answer == "25 days [S1]; 47 minutes [S2]. Bogus."
     assert len(ans.retrieved) == 2
 
 
@@ -140,8 +141,13 @@ def test_bad_tool_calls_return_errors_to_model():
 
 def test_history_is_included_before_question():
     agent, chat, _ = make_agent([ChatResult(content="sure")])
-    history = [{"role": "user", "content": "earlier"}, {"role": "assistant", "content": "reply"}]
+    history = [
+        {"role": "user", "content": "earlier"},
+        {"role": "assistant", "content": "25 days [S1]."},
+    ]
     agent.answer("follow-up", history=history)
     msgs = chat.requests[0]["messages"]
     assert [m["role"] for m in msgs] == ["system", "user", "assistant", "user"]
+    assert msgs[2]["content"] == "25 days."  # stale labels scrubbed
+    assert history[1]["content"] == "25 days [S1]."  # caller's history untouched
     assert msgs[-1]["content"] == "follow-up"

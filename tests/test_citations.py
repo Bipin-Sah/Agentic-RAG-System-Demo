@@ -1,4 +1,11 @@
-from rag.citations import SourceRegistry, extract_labels, format_sources, resolve_citations
+from rag.citations import (
+    SourceRegistry,
+    extract_labels,
+    format_sources,
+    resolve_citations,
+    strip_all_labels,
+    strip_unknown_labels,
+)
 from rag.types import RetrievedChunk
 
 
@@ -45,3 +52,15 @@ def test_format_sources():
     assert text.startswith("[S1] (a.pdf, p.3, chunk 1)")
     assert "content 1" in text
     assert format_sources([]) == "No matching passages found."
+
+
+def test_strip_unknown_labels():
+    reg = SourceRegistry()
+    reg.add([chunk(1), chunk(2)])
+    text = "A [S1]. B [S7]. C [S2, S9]. D [S8, S9]."
+    assert strip_unknown_labels(text, reg) == "A [S1]. B. C [S2]. D."
+
+
+def test_strip_all_labels():
+    assert strip_all_labels("25 days [S1][S2, S3].") == "25 days."
+    assert strip_all_labels("no labels here") == "no labels here"
