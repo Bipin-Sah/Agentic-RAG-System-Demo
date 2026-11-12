@@ -39,7 +39,6 @@ class HashingEmbedder:
 
     def __init__(self, dim: int = 64) -> None:
         self.dim = dim
-        self.calls: list[list[str]] = []
 
     def _vector(self, text: str) -> list[float]:
         vec = [0.0] * self.dim
@@ -52,7 +51,6 @@ class HashingEmbedder:
         return [v / norm for v in vec]
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        self.calls.append(list(texts))
         return [self._vector(t) for t in texts]
 
 
