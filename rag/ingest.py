@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -51,7 +52,7 @@ class Ingestor:
         """
         start = time.perf_counter()
         path = Path(path)
-        source = source or path.name
+        source = source or source_name(path)
         sha = file_sha256(path)
         existing = self.store.find_document(sha)
         if existing is not None:
@@ -72,20 +73,27 @@ class Ingestor:
         return results
 
 
-def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:
-    """Expand inputs into (file, source name) pairs.
+def source_name(path: Path) -> str:
+    """Stable identity for a file: its absolute path, with symlinks left unresolved.
 
-    Directories are searched recursively for supported files; their source name is the path
-    relative to the directory (e.g. ``policies/hr.pdf``) so same-named files stay distinct.
+    The same path gets the same name regardless of the working directory or of how it was
+    passed (directly or found under a directory), and different paths never share one, so
+    replacing a changed file can't clobber another or leave its old version behind.
     """
-    files: list[tuple[Path, str]] = []
+    return Path(os.path.abspath(path)).as_posix()
+
+
+def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:
+    """Expand inputs into (file, source name) pairs; directories are searched recursively."""
+    files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            found = sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
-            files.extend((f, f.relative_to(p).as_posix()) for f in found)
+            files.extend(
+                sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
+            )
         else:
-            files.append((p, p.name))
-    return files
+            files.append(p)
+    return [(f, source_name(f)) for f in files]
 
 
 def main(argv: list[str] | None = None) -> int:
