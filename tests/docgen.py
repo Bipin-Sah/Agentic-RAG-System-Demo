@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 
 
@@ -10,7 +11,7 @@ def _pdf_escape(text: str) -> str:
 
 
 def write_pdf(path: Path, pages: list[str]) -> Path:
-    """Write a minimal valid PDF with one line of Helvetica text per page."""
+    """Write a minimal valid PDF; each string becomes one page of wrapped Helvetica text."""
     objects: list[bytes] = []
     n = len(pages)
     font_id = 3 + 2 * n
@@ -25,7 +26,11 @@ def write_pdf(path: Path, pages: list[str]) -> Path:
                 f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
             ).encode()
         )
-        stream = f"BT /F1 12 Tf 72 720 Td ({_pdf_escape(text)}) Tj ET".encode()
+        lines = []
+        for para in text.split("\n"):
+            lines.extend(textwrap.wrap(para, 90) or [""])
+        body = " T* ".join(f"({_pdf_escape(line)}) Tj" for line in lines)
+        stream = f"BT /F1 11 Tf 14 TL 60 740 Td {body} ET".encode()
         objects.append(b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream")
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
 

@@ -1,0 +1,29 @@
+INCIDENT REPORT INC-2291
+Status: Closed
+Severity: SEV-2
+
+Summary
+On 14 July 2024 the entire drone fleet at the Lisbon warehouse was grounded after drones began
+reporting position errors of up to 800 metres. 42 drones were affected and warehouse inspection
+operations were halted for 6 hours.
+
+Timeline
+06:10 - First GPS drift alerts raised by the fleet monitoring system.
+06:25 - Operations lead grounds all drones at the Lisbon site.
+09:40 - Root cause identified by the firmware team.
+12:10 - Firmware hotfix deployed and fleet returned to service.
+
+Root cause
+Firmware version 3.2.1 contained a bug in leap-second handling in the GNSS time-synchronisation
+module. When the receiver applied a pending leap-second correction, the navigation filter
+rejected valid satellite fixes.
+
+Resolution
+The bug was fixed in firmware version 3.2.2, which was rolled out to the Lisbon fleet the same day
+and to all other customer fleets within one week.
+
+Investigation lead: Priya Raman (Senior Firmware Engineer)
+
+Follow-up actions
+1. Add leap-second scenarios to the hardware-in-the-loop test suite.
+2. Require staged rollouts (5% of fleet first) for all navigation firmware.
