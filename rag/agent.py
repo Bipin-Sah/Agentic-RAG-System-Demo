@@ -118,7 +118,9 @@ class RetrievalAgent:
                     }
                 )
 
-        result.answer = strip_unknown_labels(final.content or "", registry)
+        # Without a search there are no labels to cite, so bracketed text is left as written.
+        content = (final.content or "").strip()
+        result.answer = strip_unknown_labels(content, registry) if result.searches else content
         result.retrieved = registry.chunks
         result.citations = resolve_citations(result.answer, registry)
         result.total_ms = (time.perf_counter() - start) * 1000

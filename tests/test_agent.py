@@ -156,3 +156,16 @@ def test_history_is_included_before_question():
 def test_direct_answer_keeps_literal_bracketed_text():
     agent, _, _ = make_agent([ChatResult(content="In Markdown, [S1] is a reference link.")])
     assert agent.answer("What does [S1] mean?").answer == "In Markdown, [S1] is a reference link."
+
+
+def test_labels_stripped_when_search_found_nothing():
+    agent, _, _ = make_agent(
+        [
+            ChatResult(content=None, tool_calls=[search("zzz")]),
+            ChatResult(content="Not found [S1]."),
+        ]
+    )
+    agent.retriever.store.chunks = []
+    ans = agent.answer("Unknown thing?")
+    assert ans.used_retrieval and ans.retrieved == []
+    assert ans.answer == "Not found."
