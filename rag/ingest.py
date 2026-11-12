@@ -51,7 +51,7 @@ class Ingestor:
         """
         start = time.perf_counter()
         path = Path(path)
-        source = source or path.name
+        source = source or source_name(path)
         sha = file_sha256(path)
         existing = self.store.find_document(sha)
         if existing is not None:
@@ -72,20 +72,30 @@ class Ingestor:
         return results
 
 
-def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:
-    """Expand inputs into (file, source name) pairs.
+def source_name(path: Path) -> str:
+    """Stable identity for a file: its path relative to the working directory (or absolute).
 
-    Directories are searched recursively for supported files; their source name is the path
-    relative to the directory (e.g. ``policies/hr.pdf``) so same-named files stay distinct.
+    The same file gets the same name whether passed directly or found under a directory, and
+    different files never share one, so replacing a changed file can't clobber another.
     """
-    files: list[tuple[Path, str]] = []
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
+def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:
+    """Expand inputs into (file, source name) pairs; directories are searched recursively."""
+    files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            found = sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
-            files.extend((f, f.relative_to(p).as_posix()) for f in found)
+            files.extend(
+                sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
+            )
         else:
-            files.append((p, p.name))
-    return files
+            files.append(p)
+    return [(f, source_name(f)) for f in files]
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,6 +1,6 @@
 import pytest
 
-from rag.ingest import Ingestor, expand_paths
+from rag.ingest import Ingestor, expand_paths, source_name
 from rag.store import PgVectorStore
 from rag.types import Chunk
 from tests.docgen import write_docx, write_pdf
@@ -42,6 +42,11 @@ def test_dimension_mismatch_detected(store):
     other.close()
 
 
+@pytest.fixture(autouse=True)
+def _cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+
 def test_ingest_mixed_formats_and_dedupe(store, embedder, tmp_path):
     write_pdf(
         tmp_path / "manual.pdf",
@@ -81,7 +86,23 @@ def test_expand_paths_filters_unsupported_and_uses_relative_sources(tmp_path):
     (tmp_path / "sub" / "a.txt").write_text("other a")
     single = tmp_path / "sub" / "a.txt"
     assert [s for _, s in expand_paths([tmp_path])] == ["a.txt", "sub/a.txt"]
-    assert expand_paths([single]) == [(single, "a.txt")]
+    assert expand_paths([single]) == [(single, "sub/a.txt")]  # same name either way
+
+
+def test_source_name_outside_cwd_is_absolute(tmp_path, monkeypatch):
+    (tmp_path / "here").mkdir()
+    monkeypatch.chdir(tmp_path / "here")
+    assert source_name(tmp_path / "here" / "a.txt") == "a.txt"
+    assert source_name(tmp_path / "b.txt") == (tmp_path / "b.txt").resolve().as_posix()
+
+
+def test_separate_roots_with_same_relative_path_kept_separate(store, embedder, tmp_path):
+    for root in ["r1", "r2"]:
+        (tmp_path / root / "docs").mkdir(parents=True)
+        (tmp_path / root / "docs" / "notes.txt").write_text(f"notes from {root}")
+    Ingestor(store, embedder).ingest_paths([tmp_path / "r1" / "docs", tmp_path / "r2" / "docs"])
+    sources = sorted(d.source for d in store.list_documents())
+    assert sources == ["r1/docs/notes.txt", "r2/docs/notes.txt"]
 
 
 def test_same_basename_in_different_dirs_kept_separate(store, embedder, tmp_path):
