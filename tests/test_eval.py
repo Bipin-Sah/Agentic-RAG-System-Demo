@@ -91,6 +91,8 @@ def test_keyword_pass():
         "The documents don't mention a Zephyr X3.",
         "There is no information about revenue in the sources.",
         "That is not specified in the provided documents.",
+        "I couldn\u2019t find that in the documents.",
+        "The documents don\u2019t mention it.",
     ],
 )
 def test_refusals_detected(text):
@@ -99,6 +101,7 @@ def test_refusals_detected(text):
 
 def test_answers_are_not_refusals():
     assert not is_refusal("The X2 costs $3,499 [S1].")
+    assert not is_refusal("It costs $5,000. Ask if you need any information.")
 
 
 def test_source_matches_ignores_directory_prefix():
@@ -221,3 +224,10 @@ def test_main_rejects_unknown_system(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "")
     with pytest.raises(SystemExit):
         main(["--systems", "agent,magic"])
+
+
+def test_main_rejects_empty_system_list(monkeypatch, capsys):
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    with pytest.raises(SystemExit):
+        main(["--systems", " , "])
+    assert "at least one" in capsys.readouterr().err

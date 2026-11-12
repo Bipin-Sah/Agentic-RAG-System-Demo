@@ -106,7 +106,11 @@ def results_to_json(results: dict[str, list[QuestionScore]], summaries: list[Sum
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--questions", type=Path, default=DEFAULT_QUESTIONS)
-    parser.add_argument("--schema", default="eval", help="pgvector schema holding the corpus")
+    parser.add_argument(
+        "--schema",
+        default=None,
+        help="pgvector schema with the corpus (default: eval; eval_offline if RAG_OFFLINE=1)",
+    )
     parser.add_argument("--ingest", action="store_true", help="ingest --corpus first (deduped)")
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
     parser.add_argument("--systems", default="agent,baseline", help="comma-separated subset")
@@ -130,15 +134,19 @@ def main(argv: list[str] | None = None) -> int:
     settings = Settings.from_env()
     builders = {"agent": build_agent, "baseline": build_baseline}
     names = [n.strip() for n in args.systems.split(",") if n.strip()]
+    if not names:
+        parser.error("--systems must name at least one of: agent, baseline")
     unknown = set(names) - set(builders)
     if unknown:
         parser.error(f"unknown systems: {', '.join(sorted(unknown))}")
 
-    try:
-        require_api_key(settings)
-    except MissingAPIKey as exc:
-        print(exc, file=sys.stderr)
-        return 2
+    if not settings.offline:
+        try:
+            require_api_key(settings)
+        except MissingAPIKey as exc:
+            print(exc, file=sys.stderr)
+            return 2
+    args.schema = args.schema or ("eval_offline" if settings.offline else "eval")
 
     store = build_store(settings, schema=args.schema)
     if args.ingest:
