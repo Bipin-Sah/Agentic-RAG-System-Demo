@@ -51,3 +51,14 @@ pytest -q
 - Tests marked `db` use the pgvector database and are **skipped** if it is unreachable, so make
   sure step 2 is done and confirm in the pytest summary that nothing was skipped unexpectedly
   (`pytest -q -rs` shows skip reasons).
+
+## 5. Ingestion smoke test (needs OPENAI_API_KEY + DB)
+
+```bash
+echo "The Zephyr X2 drone has a 47 minute battery life." > /tmp/smoke.txt
+python -m rag.ingest /tmp/smoke.txt          # prints chunks + doc_id
+python -m rag.ingest /tmp/smoke.txt          # second run must say "skipped (already ingested)"
+python -m rag.ingest --reset path/to/dir     # wipe store, ingest every pdf/docx/txt/md in dir
+```
+
+Without `OPENAI_API_KEY` the CLI exits with a clear `MissingAPIKey` error (expected).
