@@ -28,14 +28,22 @@ def load_pdf(path: Path) -> list[PageText]:
 
 def load_docx(path: Path) -> list[PageText]:
     import docx
+    from docx.table import Table
 
     document = docx.Document(str(path))
-    blocks = [p.text.strip() for p in document.paragraphs if p.text.strip()]
-    for table in document.tables:
-        for row in table.rows:
-            cells = [c.text.strip() for c in row.cells if c.text.strip()]
-            if cells:
-                blocks.append(" | ".join(cells))
+    blocks: list[str] = []
+    # Walk paragraphs and tables in document order so tables keep their surrounding context.
+    for item in document.iter_inner_content():
+        if isinstance(item, Table):
+            rows = []
+            for row in item.rows:
+                cells = [c.text.strip() for c in row.cells if c.text.strip()]
+                if cells:
+                    rows.append(" | ".join(cells))
+            if rows:
+                blocks.append("\n".join(rows))
+        elif item.text.strip():
+            blocks.append(item.text.strip())
     text = "\n\n".join(blocks)
     return [PageText(text=text)] if text else []
 

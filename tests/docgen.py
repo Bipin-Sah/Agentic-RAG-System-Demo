@@ -45,7 +45,13 @@ def write_pdf(path: Path, pages: list[str]) -> Path:
     return path
 
 
-def write_docx(path: Path, paragraphs: list[str], table: list[list[str]] | None = None) -> Path:
+def write_docx(
+    path: Path,
+    paragraphs: list[str],
+    table: list[list[str]] | None = None,
+    after: list[str] | None = None,
+) -> Path:
+    """Write paragraphs, then an optional table, then optional trailing paragraphs."""
     import docx
 
     document = docx.Document()
@@ -56,5 +62,7 @@ def write_docx(path: Path, paragraphs: list[str], table: list[list[str]] | None 
         for r, row in enumerate(table):
             for c, value in enumerate(row):
                 t.cell(r, c).text = value
+    for p in after or []:
+        document.add_paragraph(p)
     document.save(str(path))
     return path

@@ -51,3 +51,14 @@ def test_unsupported_extension(tmp_path):
     p.write_bytes(b"\x89PNG")
     with pytest.raises(UnsupportedFileType):
         load_document(p)
+
+
+def test_docx_table_stays_in_document_order(tmp_path):
+    p = write_docx(
+        tmp_path / "doc.docx",
+        ["Intro.", "Sales table:"],
+        table=[["EMEA", "42"]],
+        after=["Closing remarks."],
+    )
+    text = load_document(p)[0].text
+    assert text.index("Sales table:") < text.index("EMEA | 42") < text.index("Closing remarks.")
