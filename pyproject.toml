@@ -1,0 +1,18 @@
+[project]
+name = "agentic-rag"
+version = "0.1.0"
+description = "Agentic RAG system with pgvector, OpenAI, an eval harness and a Streamlit UI"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "db: tests that need a running pgvector database (DATABASE_URL)",
+]

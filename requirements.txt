@@ -1,0 +1,25 @@
+# --- LLM + embeddings ---
+openai>=1.40,<2
+
+# --- Vector store (local Postgres + pgvector, see docker-compose.yml) ---
+psycopg[binary]>=3.1,<4
+pgvector>=0.3,<0.4
+numpy>=1.26,<3
+
+# --- Document loaders ---
+pypdf>=4.3,<6
+python-docx>=1.1,<2
+
+# --- Config ---
+python-dotenv>=1.0,<2
+
+# --- Web UI ---
+streamlit>=1.38,<2
+pandas>=2.0,<3
+
+# --- Eval reporting ---
+tabulate>=0.9,<1
+
+# --- Dev / test ---
+pytest>=8,<9
+ruff>=0.6,<1
