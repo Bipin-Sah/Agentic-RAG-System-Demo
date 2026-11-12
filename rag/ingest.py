@@ -44,7 +44,11 @@ class Ingestor:
         self.chunk_overlap = chunk_overlap
 
     def ingest_file(self, path: str | Path, source: str | None = None) -> IngestResult:
-        """Ingest one file. Files already in the store (same SHA-256) are skipped."""
+        """Ingest one file.
+
+        Files already in the store (same SHA-256) are skipped; a changed file with the same
+        ``source`` name replaces its previous version.
+        """
         start = time.perf_counter()
         path = Path(path)
         source = source or path.name
@@ -63,21 +67,24 @@ class Ingestor:
 
     def ingest_paths(self, paths: list[str | Path]) -> list[IngestResult]:
         results = []
-        for p in expand_paths(paths):
-            results.append(self.ingest_file(p))
+        for path, source in expand_paths(paths):
+            results.append(self.ingest_file(path, source=source))
         return results
 
 
-def expand_paths(paths: list[str | Path]) -> list[Path]:
-    """Expand directories into the supported files they contain (recursively, sorted)."""
-    files: list[Path] = []
+def expand_paths(paths: list[str | Path]) -> list[tuple[Path, str]]:
+    """Expand inputs into (file, source name) pairs.
+
+    Directories are searched recursively for supported files; their source name is the path
+    relative to the directory (e.g. ``policies/hr.pdf``) so same-named files stay distinct.
+    """
+    files: list[tuple[Path, str]] = []
     for p in map(Path, paths):
         if p.is_dir():
-            files.extend(
-                sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
-            )
+            found = sorted(f for f in p.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS)
+            files.extend((f, f.relative_to(p).as_posix()) for f in found)
         else:
-            files.append(p)
+            files.append((p, p.name))
     return files
 
 

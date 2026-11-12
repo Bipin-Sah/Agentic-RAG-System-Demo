@@ -74,7 +74,33 @@ def test_ingest_rejects_empty_file(store, embedder, tmp_path):
         Ingestor(store, embedder).ingest_file(p)
 
 
-def test_expand_paths_filters_unsupported(tmp_path):
+def test_expand_paths_filters_unsupported_and_uses_relative_sources(tmp_path):
     (tmp_path / "a.txt").write_text("a")
     (tmp_path / "b.bin").write_text("b")
-    assert [p.name for p in expand_paths([tmp_path])] == ["a.txt"]
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "a.txt").write_text("other a")
+    single = tmp_path / "sub" / "a.txt"
+    assert [s for _, s in expand_paths([tmp_path])] == ["a.txt", "sub/a.txt"]
+    assert expand_paths([single]) == [(single, "a.txt")]
+
+
+def test_same_basename_in_different_dirs_kept_separate(store, embedder, tmp_path):
+    for d in ["x", "y"]:
+        (tmp_path / d).mkdir()
+        (tmp_path / d / "notes.txt").write_text(f"notes for team {d}")
+    Ingestor(store, embedder).ingest_paths([tmp_path])
+    assert sorted(d.source for d in store.list_documents()) == ["x/notes.txt", "y/notes.txt"]
+
+
+def test_changed_file_replaces_previous_version(store, embedder, tmp_path):
+    p = tmp_path / "policy.txt"
+    p.write_text("The office closes at 5pm.")
+    ingestor = Ingestor(store, embedder)
+    first = ingestor.ingest_file(p)
+    p.write_text("The office closes at 7pm.")
+    second = ingestor.ingest_file(p)
+    assert not second.skipped and second.document_id != first.document_id
+    docs = store.list_documents()
+    assert [(d.id, d.source) for d in docs] == [(second.document_id, "policy.txt")]
+    hits = store.search(embedder.embed(["office closes"])[0], k=5)
+    assert [h.content for h in hits] == ["The office closes at 7pm."]
