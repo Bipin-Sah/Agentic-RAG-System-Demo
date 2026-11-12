@@ -119,3 +119,14 @@ def test_setup_error_is_shown_without_crashing(monkeypatch):
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
     assert "OPENAI_API_KEY" in at.error[0].value
+
+
+def test_history_rerender_has_no_magic_output():
+    comps = components([ChatResult(content="Hello!"), ChatResult(content="Hi again!")])
+    at = run_app(comps)
+    at.chat_input[0].set_value("hi").run()
+    at.chat_input[0].set_value("hello").run()
+    assert not at.exception
+    texts = [m.value for m in at.markdown]
+    assert not any("DeltaGenerator" in t or t.strip() == "None" for t in texts)
+    assert not at.get("help") and not at.json

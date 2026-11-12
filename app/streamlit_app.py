@@ -137,7 +137,10 @@ def sidebar(components: Components) -> str:
 def chat_tab(components: Components, mode: str) -> None:
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            render_answer(msg) if msg["role"] == "assistant" else st.markdown(msg["content"])
+            if msg["role"] == "assistant":
+                render_answer(msg)
+            else:
+                st.markdown(msg["content"])
 
     question = st.chat_input("Ask a question about your documents")
     if not question:
