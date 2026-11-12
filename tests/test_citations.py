@@ -64,3 +64,10 @@ def test_strip_unknown_labels():
 def test_strip_all_labels():
     assert strip_all_labels("25 days [S1][S2, S3].") == "25 days."
     assert strip_all_labels("no labels here") == "no labels here"
+
+
+def test_strip_preserves_other_whitespace():
+    reg = SourceRegistry()
+    reg.add([chunk(1)])
+    code = "Example:\n\n    def f():\n        return 1  # x\n\nDone [S1] and [S5]."
+    assert strip_unknown_labels(code, reg) == code.replace(" and [S5]", " and")

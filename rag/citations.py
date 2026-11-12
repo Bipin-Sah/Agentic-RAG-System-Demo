@@ -70,21 +70,29 @@ def extract_labels(text: str) -> list[str]:
     return seen
 
 
-def strip_unknown_labels(text: str, registry: SourceRegistry) -> str:
-    """Remove labels that don't refer to a retrieved chunk ('[S7]', or 'S7' in '[S1, S7]')."""
+_LABEL_WITH_SPACE = re.compile(r"[ \t]*" + _CITATION_GROUP.pattern)
+
+
+def _remove_labels(text: str, is_known) -> str:
+    """Drop unknown labels together with the spaces before them; all other text is untouched."""
 
     def keep(match: re.Match) -> str:
-        labels = [p.strip() for p in match.group(1).split(",")]
-        known = [label for label in labels if registry.get(label) is not None]
-        return f"[{', '.join(known)}]" if known else ""
+        known = [p.strip() for p in match.group(1).split(",") if is_known(p.strip())]
+        if not known:
+            return ""
+        return match.group(0)[: match.start(1) - 1 - match.start(0)] + f"[{', '.join(known)}]"
 
-    cleaned = _CITATION_GROUP.sub(keep, text or "")
-    return re.sub(r"[ \t]+([.,;:!?])", r"\1", re.sub(r"[ \t]{2,}", " ", cleaned)).strip()
+    return _LABEL_WITH_SPACE.sub(keep, text or "").strip()
+
+
+def strip_unknown_labels(text: str, registry: SourceRegistry) -> str:
+    """Remove labels that don't refer to a retrieved chunk ('[S7]', or 'S7' in '[S1, S7]')."""
+    return _remove_labels(text, lambda label: registry.get(label) is not None)
 
 
 def strip_all_labels(text: str) -> str:
     """Remove every citation label (used to scrub prior turns so stale labels aren't reused)."""
-    return strip_unknown_labels(text, SourceRegistry())
+    return _remove_labels(text, lambda label: False)
 
 
 def resolve_citations(text: str, registry: SourceRegistry) -> list[Citation]:
