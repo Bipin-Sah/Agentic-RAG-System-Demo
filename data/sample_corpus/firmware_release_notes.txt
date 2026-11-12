@@ -1,0 +1,19 @@
+Zephyr Fleet Firmware - Release Notes
+
+3.3.0 (October 2024)
+- Adds obstacle avoidance for low-light warehouses.
+- Battery health estimation now reports remaining charge cycles.
+
+3.2.2 (14 July 2024)
+- Hotfix: corrects leap-second handling in the GNSS time-synchronisation module (see INC-2291).
+
+3.2.1 (June 2024)
+- Improves landing precision on charging pads to +/- 2 cm.
+- Known issue: navigation fixes may be rejected after a leap-second correction.
+
+3.2.0 (April 2024)
+- First firmware release supporting the Zephyr X2.
+- New fleet dashboard integration.
+
+3.1.0 (January 2024)
+- Final feature release for the Zephyr X1. Later X1 releases contain security fixes only.

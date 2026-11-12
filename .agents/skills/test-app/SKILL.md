@@ -51,3 +51,45 @@ pytest -q
 - Tests marked `db` use the pgvector database and are **skipped** if it is unreachable, so make
   sure step 2 is done and confirm in the pytest summary that nothing was skipped unexpectedly
   (`pytest -q -rs` shows skip reasons).
+
+## 5. Ingestion smoke test (needs OPENAI_API_KEY + DB)
+
+```bash
+echo "The Zephyr X2 drone has a 47 minute battery life." > /tmp/smoke.txt
+python -m rag.ingest /tmp/smoke.txt          # prints chunks + doc_id
+python -m rag.ingest /tmp/smoke.txt          # second run must say "skipped (already ingested)"
+python -m rag.ingest --reset path/to/dir     # wipe store, ingest every pdf/docx/txt/md in dir
+```
+
+Without `OPENAI_API_KEY` the CLI exits with a clear `MissingAPIKey` error (expected).
+
+## 6. Retrieval agent smoke test (needs OPENAI_API_KEY + ingested docs)
+
+```bash
+python -m rag.agent "hi, who are you?"                       # expect: no "Searches:" section
+python -m rag.agent "How long does the Zephyr X2 battery last?"  # expect: >=1 search + [S#] citations
+```
+
+Check that the output shows the citations list (`[S1] source, chunk N`), the search queries the
+agent chose, and the latency breakdown.
+
+## 7. Eval harness (needs OPENAI_API_KEY + DB)
+
+The fixed question set is `evals/questions.jsonl` (single-hop, multi-hop, no-retrieval and
+unanswerable questions) over the fictional corpus in `data/sample_corpus/`. The eval uses its own
+pgvector schema (`eval`), so it never mixes with documents you ingested yourself.
+
+```bash
+python -m evals.run_eval --ingest                  # first run: ingest corpus (deduped), then evaluate
+python -m evals.run_eval --per-question            # also print per-question results
+python -m evals.run_eval --limit 3 --systems agent # quick smoke run
+python -m evals.run_eval --output eval_results/run.json   # full answers as JSON (git-ignored)
+```
+
+Expect live progress lines, then a comparison table (agent vs baseline) with answer accuracy,
+cited-source recall, retrieve/skip decision accuracy, refusal rate on unanswerable questions,
+searches / LLM calls / tokens per question, and mean / p95 latency. `Errors` should be 0.
+Without `OPENAI_API_KEY` it exits with code 2 and a clear message. The offline version of this
+pipeline (fake LLM + embedder) runs in `tests/test_eval.py`.
+
+To regenerate the PDF/DOCX files in the corpus: `python scripts/make_sample_corpus.py`.

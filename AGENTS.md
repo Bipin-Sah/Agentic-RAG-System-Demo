@@ -20,7 +20,7 @@ rag/                    # Python package with all core logic
   config.py             # Settings loaded from env / .env
   ...                   # loaders, chunking, embeddings, store, agent, baseline (added per slice)
 app/                    # Streamlit UI
-eval/                   # Eval harness + fixed question set
+evals/                  # Eval harness + fixed question set
 data/sample_corpus/     # Small fictional corpus used by the eval and demos
 tests/                  # pytest suite (offline by default)
 .agents/skills/test-app # How to install, run and test the app (read before every PR)
@@ -31,7 +31,7 @@ requirements.txt        # All runtime + dev dependencies
 ## Conventions
 
 - **Python 3.10+**, type hints on public functions, small focused modules.
-- **Tests are required.** Every change to core logic (`rag/`, `eval/`) ships with pytest tests.
+- **Tests are required.** Every change to core logic (`rag/`, `evals/`) ships with pytest tests.
   - Unit tests must run **offline**: use the fake embedder / fake chat client in `tests/`, never the
     real OpenAI API.
   - Tests that need Postgres are marked `@pytest.mark.db` and are skipped automatically when the

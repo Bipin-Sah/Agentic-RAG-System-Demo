@@ -18,3 +18,14 @@ pytest -q
 See [AGENTS.md](AGENTS.md) for project structure and conventions, and
 [.agents/skills/test-app/SKILL.md](.agents/skills/test-app/SKILL.md) for the full
 install / run / test procedure.
+
+## Evaluate agent vs. naive RAG
+
+```bash
+python -m evals.run_eval --ingest --per-question
+```
+
+Runs the fixed question set in `evals/questions.jsonl` against the retrieval agent and a naive
+single-shot RAG baseline (always retrieve top-k for the raw question, one LLM call) and prints a
+comparison table: answer accuracy, cited-source recall, retrieve/skip decisions, refusals on
+unanswerable questions, cost (searches, LLM calls, tokens) and latency.
