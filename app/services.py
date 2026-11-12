@@ -28,6 +28,7 @@ class Components:
     store: object  # PgVectorStore-like: list_documents, delete_document, count_chunks
     ingestor: Ingestor
     systems: dict[str, AnswerSystem] = field(default_factory=dict)
+    offline: bool = False
 
 
 def safe_filename(name: str) -> str:

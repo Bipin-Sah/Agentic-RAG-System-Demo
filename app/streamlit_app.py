@@ -53,6 +53,7 @@ def _build_components() -> Components:
         store=store,
         ingestor=Ingestor(store, embedder, settings.chunk_size, settings.chunk_overlap),
         systems={AGENT: build_agent(settings, store), BASELINE: build_baseline(settings, store)},
+        offline=settings.offline,
     )
 
 
@@ -193,6 +194,11 @@ def main() -> None:
     components = get_components()
     if components is None:
         return
+    if components.offline:
+        st.warning(
+            "**Offline demo mode** (`RAG_OFFLINE=1`): hashing embeddings and a rule-based "
+            "extractive model stand in for OpenAI, so answers are crude quotes, not LLM output."
+        )
     mode = sidebar(components)
     chat, latency = st.tabs(["Chat", "Latency"])
     with chat:
