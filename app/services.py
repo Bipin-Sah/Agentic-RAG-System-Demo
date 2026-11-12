@@ -14,7 +14,7 @@ from rag.loaders import SUPPORTED_EXTENSIONS
 
 UPLOAD_TYPES = sorted(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS)
 HISTORY_TURNS = 6
-_UNSAFE = re.compile(r"[^A-Za-z0-9._ -]+")
+_UNSAFE = re.compile(r"[^\w. -]+")
 
 
 class AnswerSystem(Protocol):

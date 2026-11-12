@@ -31,6 +31,8 @@ class RecordingIngestor:
         ("../../etc/notes.txt", "notes.txt"),
         ("C:\\Users\\me\\Spec Sheet.DOCX", "Spec Sheet.DOCX"),
         ("we$ird<name>.md", "we_ird_name_.md"),
+        ("报告.txt", "报告.txt"),
+        ("Café notes.md", "Café notes.md"),
     ],
 )
 def test_safe_filename(name, expected):
