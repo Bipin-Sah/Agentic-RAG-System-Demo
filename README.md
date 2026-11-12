@@ -29,3 +29,13 @@ Runs the fixed question set in `evals/questions.jsonl` against the retrieval age
 single-shot RAG baseline (always retrieve top-k for the raw question, one LLM call) and prints a
 comparison table: answer accuracy, cited-source recall, retrieve/skip decisions, refusals on
 unanswerable questions, cost (searches, LLM calls, tokens) and latency.
+
+## Web UI
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+Upload PDF / DOCX / text files in the sidebar, chat with the agent (or switch to the naive
+baseline), expand **Sources** to see the cited chunks and **Retrieval trace** to see the agent's
+search queries, and open the **Latency** tab to track total / retrieval / LLM time per question.
