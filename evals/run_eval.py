@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     settings = Settings.from_env()
     builders = {"agent": build_agent, "baseline": build_baseline}
     names = [n.strip() for n in args.systems.split(",") if n.strip()]
+    if not names:
+        parser.error("--systems must name at least one of: agent, baseline")
     unknown = set(names) - set(builders)
     if unknown:
         parser.error(f"unknown systems: {', '.join(sorted(unknown))}")

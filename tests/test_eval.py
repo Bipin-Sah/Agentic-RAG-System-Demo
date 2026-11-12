@@ -224,3 +224,10 @@ def test_main_rejects_unknown_system(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "")
     with pytest.raises(SystemExit):
         main(["--systems", "agent,magic"])
+
+
+def test_main_rejects_empty_system_list(monkeypatch, capsys):
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    with pytest.raises(SystemExit):
+        main(["--systems", " , "])
+    assert "at least one" in capsys.readouterr().err
