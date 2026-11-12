@@ -62,3 +62,13 @@ python -m rag.ingest --reset path/to/dir     # wipe store, ingest every pdf/docx
 ```
 
 Without `OPENAI_API_KEY` the CLI exits with a clear `MissingAPIKey` error (expected).
+
+## 6. Retrieval agent smoke test (needs OPENAI_API_KEY + ingested docs)
+
+```bash
+python -m rag.agent "hi, who are you?"                       # expect: no "Searches:" section
+python -m rag.agent "How long does the Zephyr X2 battery last?"  # expect: >=1 search + [S#] citations
+```
+
+Check that the output shows the citations list (`[S1] source, chunk N`), the search queries the
+agent chose, and the latency breakdown.
