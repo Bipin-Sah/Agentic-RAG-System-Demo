@@ -123,3 +123,25 @@ Open http://localhost:8501 in the browser and record the following steps:
    and the latency table.
 
 Offline UI checks (fake components, no key needed) run in `tests/test_streamlit_app.py`.
+
+### No API key / no credits: offline demo mode
+
+Set `RAG_OFFLINE=1` to swap OpenAI for `rag/offline.py` (hashing embeddings + a rule-based
+extractive "LLM") while still using the real pgvector DB (schema `offline`, isolated from real
+embeddings). The full UI flow above works, with these differences:
+
+```bash
+RAG_OFFLINE=1 streamlit run app/streamlit_app.py --server.port 8501 --server.headless true
+```
+
+- A yellow "Offline demo mode" banner is shown at the top.
+- Answers are quoted sentences from the best-matching chunks with `[S#]` citations, not LLM prose;
+  check that the quote contains the fact (e.g. `2.3 kg`) and that Sources lists the right file.
+- Greetings (`Hi`, `Hello`, …) skip retrieval; follow-ups with pronouns ("it") fold in the previous
+  question, visible in the Retrieval trace query.
+- Latency numbers are tiny (no network); they still populate the Latency tab.
+- Reset the offline store between runs:
+  `RAG_OFFLINE=1 python -c "from rag.config import Settings; from rag.factory import build_store; build_store(Settings.from_env()).clear()"`
+
+`RAG_OFFLINE=1 python -m evals.run_eval --ingest` also runs (schema `eval_offline`), but its
+accuracy numbers say nothing about the real system.
