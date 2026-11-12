@@ -16,7 +16,7 @@ UNANSWERABLE = "unanswerable"
 _REFUSAL = re.compile(
     r"\b(?:"
     r"(?:do(?:es)?|did) ?n[o']t (?:contain|mention|include|say|specify|provide|have|cover|know)"
-    r"|(?:no|not any|any) (?:information|mention|details?|data|record)"
+    r"|(?:no|not any) (?:information|mention|details?|data|record)"
     r"|(?:could|can|was) ?n[o']t (?:find|locate|determine|be found)"
     r"|(?:cannot|can not|unable to) (?:find|answer|determine|locate)"
     r"|not (?:mentioned|available|specified|provided|found|covered|stated|included)"
@@ -69,7 +69,7 @@ def source_matches(expected: str, cited: list[str]) -> bool:
 
 
 def is_refusal(answer: str) -> bool:
-    return bool(_REFUSAL.search(answer))
+    return bool(_REFUSAL.search(answer.replace("\u2019", "'").replace("\u2018", "'")))
 
 
 @dataclass
