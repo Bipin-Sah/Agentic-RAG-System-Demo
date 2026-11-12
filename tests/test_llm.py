@@ -50,3 +50,12 @@ def test_assistant_message_roundtrip():
     assert msg["tool_calls"][0]["id"] == "i"
     assert json.loads(msg["tool_calls"][0]["function"]["arguments"]) == {"query": "q"}
     assert "tool_calls" not in assistant_message(ChatResult(content="x"))
+
+
+def test_non_object_tool_args_become_empty_dict():
+    calls = [
+        SimpleNamespace(id=str(i), function=SimpleNamespace(name="search", arguments=raw))
+        for i, raw in enumerate(["[]", "null", "3"])
+    ]
+    client, _ = client_for(SimpleNamespace(content=None, tool_calls=calls))
+    assert [tc.arguments for tc in client.complete([]).tool_calls] == [{}, {}, {}]

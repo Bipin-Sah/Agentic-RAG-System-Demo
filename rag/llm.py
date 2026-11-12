@@ -81,6 +81,8 @@ class OpenAIChatClient:
                 args = json.loads(tc.function.arguments or "{}")
             except json.JSONDecodeError:
                 args = {}
+            if not isinstance(args, dict):
+                args = {}
             calls.append(ToolCall(id=tc.id, name=tc.function.name, arguments=args))
         usage = response.usage
         return ChatResult(
