@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from rag.config import Settings
 from rag.embeddings import OpenAIEmbedder
 from rag.store import PgVectorStore
+
+if TYPE_CHECKING:
+    from rag.agent import RetrievalAgent
+    from rag.llm import OpenAIChatClient
+    from rag.retriever import Retriever
 
 
 class MissingAPIKey(RuntimeError):
@@ -28,4 +35,24 @@ def build_store(settings: Settings) -> PgVectorStore:
 def build_embedder(settings: Settings) -> OpenAIEmbedder:
     return OpenAIEmbedder(
         model=settings.embed_model, dim=settings.embed_dim, api_key=require_api_key(settings)
+    )
+
+
+def build_chat(settings: Settings) -> OpenAIChatClient:
+    from rag.llm import OpenAIChatClient
+
+    return OpenAIChatClient(model=settings.chat_model, api_key=require_api_key(settings))
+
+
+def build_retriever(settings: Settings, store: PgVectorStore | None = None) -> Retriever:
+    from rag.retriever import Retriever
+
+    return Retriever(store or build_store(settings), build_embedder(settings), settings.top_k)
+
+
+def build_agent(settings: Settings, store: PgVectorStore | None = None) -> RetrievalAgent:
+    from rag.agent import RetrievalAgent
+
+    return RetrievalAgent(
+        build_chat(settings), build_retriever(settings, store), default_k=settings.top_k
     )
