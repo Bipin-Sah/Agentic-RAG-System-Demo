@@ -51,7 +51,21 @@ def test_save_and_ingest_upload(tmp_path):
 
     ingestor = RecordingIngestor()
     assert ingest_upload(ingestor, "a.txt", b"v2", tmp_path / "up") == "result"
-    assert ingestor.calls == [(tmp_path / "up" / "a.txt", "a.txt", b"v2")]
+    [(ingested_path, source, data)] = ingestor.calls
+    assert ingested_path.parent == tmp_path / "up" and ingested_path.suffix == ".txt"
+    assert ingested_path.name != "a.txt" and (source, data) == ("a.txt", b"v2")
+    assert path.read_bytes() == b"v2"
+    assert sorted(p.name for p in (tmp_path / "up").iterdir()) == ["a.txt"]
+
+
+def test_ingest_upload_cleans_up_temp_file_on_failure(tmp_path):
+    class Failing:
+        def ingest_file(self, path, source=None):
+            raise ValueError("No extractable text")
+
+    with pytest.raises(ValueError):
+        ingest_upload(Failing(), "b.txt", b"", tmp_path)
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_history_for_model_keeps_recent_plain_turns():

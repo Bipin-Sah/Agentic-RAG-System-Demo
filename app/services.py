@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import re
 import statistics
+import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -49,9 +51,23 @@ def save_upload(name: str, data: bytes, upload_dir: Path) -> Path:
 
 
 def ingest_upload(ingestor: Ingestor, name: str, data: bytes, upload_dir: Path) -> IngestResult:
-    """Save and ingest an uploaded file; re-uploading a changed file replaces its old version."""
-    path = save_upload(name, data, upload_dir)
-    return ingestor.ingest_file(path, source=path.name)
+    """Save and ingest an uploaded file; re-uploading a changed file replaces its old version.
+
+    Each upload is ingested from its own temp file (hashed and parsed from the same bytes even if
+    another session uploads the same name concurrently), then moved to ``upload_dir/<name>``.
+    """
+    filename = safe_filename(name)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=upload_dir, prefix=".upload-", suffix=Path(filename).suffix)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        result = ingestor.ingest_file(Path(tmp), source=filename)
+        os.replace(tmp, upload_dir / filename)
+        return result
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 def history_for_model(messages: list[dict], turns: int = HISTORY_TURNS) -> list[dict]:
