@@ -91,12 +91,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
+    embedder = build_embedder(settings)  # fail fast (e.g. missing API key) before touching data
     store = build_store(settings)
     if args.reset:
         store.clear()
-    ingestor = Ingestor(
-        store, build_embedder(settings), settings.chunk_size, settings.chunk_overlap
-    )
+    ingestor = Ingestor(store, embedder, settings.chunk_size, settings.chunk_overlap)
     for r in ingestor.ingest_paths(args.paths):
         status = "skipped (already ingested)" if r.skipped else f"{r.seconds:.2f}s"
         print(f"{r.source}: {r.num_chunks} chunks, doc_id={r.document_id} [{status}]")
