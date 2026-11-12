@@ -71,3 +71,7 @@ def test_strip_preserves_other_whitespace():
     reg.add([chunk(1)])
     code = "Example:\n\n    def f():\n        return 1  # x\n\nDone [S1] and [S5]."
     assert strip_unknown_labels(code, reg) == code.replace(" and [S5]", " and")
+
+
+def test_strip_unknown_labels_with_empty_registry_removes_all():
+    assert strip_unknown_labels("x [S1].", SourceRegistry()) == "x."
