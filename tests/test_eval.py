@@ -91,6 +91,8 @@ def test_keyword_pass():
         "The documents don't mention a Zephyr X3.",
         "There is no information about revenue in the sources.",
         "That is not specified in the provided documents.",
+        "I couldn\u2019t find that in the documents.",
+        "The documents don\u2019t mention it.",
     ],
 )
 def test_refusals_detected(text):

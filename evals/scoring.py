@@ -69,7 +69,7 @@ def source_matches(expected: str, cited: list[str]) -> bool:
 
 
 def is_refusal(answer: str) -> bool:
-    return bool(_REFUSAL.search(answer))
+    return bool(_REFUSAL.search(answer.replace("\u2019", "'").replace("\u2018", "'")))
 
 
 @dataclass
