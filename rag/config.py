@@ -30,6 +30,7 @@ class Settings:
     chunk_size: int = 800
     chunk_overlap: int = 150
     top_k: int = 5
+    offline: bool = False
 
     def __post_init__(self) -> None:
         if self.chunk_size <= 0:
@@ -52,4 +53,5 @@ class Settings:
             chunk_size=_int_env("RAG_CHUNK_SIZE", cls.chunk_size),
             chunk_overlap=_int_env("RAG_CHUNK_OVERLAP", cls.chunk_overlap),
             top_k=_int_env("RAG_TOP_K", cls.top_k),
+            offline=os.getenv("RAG_OFFLINE", "").strip().lower() in {"1", "true", "yes", "on"},
         )

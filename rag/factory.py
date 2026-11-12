@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from rag.config import Settings
-from rag.embeddings import OpenAIEmbedder
+from rag.embeddings import Embedder, OpenAIEmbedder
 from rag.store import PgVectorStore
 
 if TYPE_CHECKING:
     from rag.agent import RetrievalAgent
     from rag.baseline import NaiveRAG
-    from rag.llm import OpenAIChatClient
+    from rag.llm import ChatClient
     from rag.retriever import Retriever
 
 
@@ -27,19 +27,33 @@ def require_api_key(settings: Settings) -> str:
     return settings.openai_api_key
 
 
-def build_store(settings: Settings, schema: str = "public") -> PgVectorStore:
+OFFLINE_SCHEMA = "offline"
+
+
+def build_store(settings: Settings, schema: str | None = None) -> PgVectorStore:
+    """Offline mode gets its own schema so fake vectors never mix with real embeddings."""
+    if schema is None:
+        schema = OFFLINE_SCHEMA if settings.offline else "public"
     store = PgVectorStore(settings.database_url, settings.embed_dim, schema=schema)
     store.init_schema()
     return store
 
 
-def build_embedder(settings: Settings) -> OpenAIEmbedder:
+def build_embedder(settings: Settings) -> Embedder:
+    if settings.offline:
+        from rag.offline import HashingEmbedder
+
+        return HashingEmbedder(dim=settings.embed_dim)
     return OpenAIEmbedder(
         model=settings.embed_model, dim=settings.embed_dim, api_key=require_api_key(settings)
     )
 
 
-def build_chat(settings: Settings) -> OpenAIChatClient:
+def build_chat(settings: Settings) -> ChatClient:
+    if settings.offline:
+        from rag.offline import RuleChatClient
+
+        return RuleChatClient()
     from rag.llm import OpenAIChatClient
 
     return OpenAIChatClient(model=settings.chat_model, api_key=require_api_key(settings))
